@@ -1,66 +1,159 @@
 {% extends "base.html" %}
 
+{% block title %}Interactive Demo Playground - Screen Sample Candidates | TalentAI{% endblock %}
+
 {% block content %}
-<div class="container py-5">
+<div class="container py-5" id="demo_page_container">
     <div class="row justify-content-center">
-        <div class="col-md-10">
-            <div class="card shadow">
-                <div class="card-header bg-success text-white">
-                    <h3><i class="fas fa-play-circle"></i> Try Demo with Sample Dataset</h3>
-                </div>
-                <div class="card-body">
-                    <form method="POST">
-                        <!-- Sample Job Selection -->
-                        <div class="mb-4">
-                            <label class="form-label"><strong>Sample Job Descriptions</strong></label>
-                            <div class="list-group">
-                                {% for job_title, job_desc in sample_jobs.items() %}
-                                <button type="button" class="list-group-item list-group-item-action" 
-                                        onclick="document.getElementById('job_description').value = '{{ job_desc }}'">
-                                    <strong>{{ job_title }}</strong>
-                                    <p class="mb-0 text-muted small">{{ job_desc[:100] }}...</p>
-                                </button>
-                                {% endfor %}
+        <div class="col-lg-10 col-xl-9">
+            <!-- Header Title -->
+            <div class="text-center mb-5">
+                <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-30 px-3 py-2 rounded-pill mb-2">
+                    <i class="fas fa-flask me-1"></i> Interactive Evaluation Sandbox
+                </span>
+                <h1 class="display-6 fw-bold mb-2">Candidate Screening Demo</h1>
+                <p class="text-secondary fs-6 max-w-650 mx-auto">
+                    Select a target job specification below to run instant GPU-accelerated NLP screening against our benchmark candidate dataset.
+                </p>
+            </div>
+
+            <!-- Role Selector Cards Grid -->
+            <div class="mb-4">
+                <label class="form-label-custom mb-3">
+                    <span><i class="fas fa-layer-group text-primary me-1"></i> Choose a Target Role</span>
+                    <span class="text-muted small">Click to load job specifications</span>
+                </label>
+                <div class="row g-3" id="sample_roles_grid">
+                    {% for job_title, job_desc in sample_jobs.items() %}
+                    <div class="col-md-6">
+                        <div class="glass-panel p-3 h-100 role-select-card cursor-pointer" 
+                             style="cursor: pointer; transition: all 0.2s ease;"
+                             onclick="selectDemoRole('{{ job_title|replace("'", "\\'") }}', `{{ job_desc|replace("`", "\\`") }}`)"
+                             id="role_card_{{ loop.index }}">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="brand-icon-wrapper flex-shrink-0" style="width: 44px; height: 44px; font-size: 1.1rem;">
+                                    {% if 'AI' in job_title or 'Machine' in job_title %}
+                                        <i class="fas fa-robot"></i>
+                                    {% elif 'Full Stack' in job_title %}
+                                        <i class="fas fa-code"></i>
+                                    {% elif 'Data' in job_title %}
+                                        <i class="fas fa-chart-line"></i>
+                                    {% else %}
+                                        <i class="fas fa-cloud"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="text-white fw-bold mb-1">{{ job_title }}</h6>
+                                    <p class="text-secondary small mb-2 text-truncate-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                        {{ job_desc }}
+                                    </p>
+                                    <span class="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25 small">
+                                        <i class="fas fa-bolt me-1"></i> Click to Select
+                                    </span>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
 
-                        <!-- Job Description -->
-                        <div class="mb-4">
-                            <label for="job_description" class="form-label">
-                                <strong>Job Description</strong>
+            <!-- Screening Configuration Form -->
+            <div class="glass-panel p-4 mb-4" id="demo_form_card">
+                <form method="POST" id="screening_upload_form">
+                    <div class="d-flex align-items-center justify-content-between mb-3 border-bottom border-secondary border-opacity-25 pb-3">
+                        <h5 class="mb-0 text-white"><i class="fas fa-briefcase text-primary me-2"></i> Active Job Description</h5>
+                        <span class="badge bg-secondary bg-opacity-25 text-white-50" id="selected_role_badge">Role: AI / Machine Learning Engineer</span>
+                    </div>
+
+                    <div class="mb-4">
+                        <textarea class="form-control form-control-custom" id="job_description" name="job_description" rows="5" required></textarea>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="required_experience" class="form-label form-label-custom">
+                                <span><i class="fas fa-clock text-primary me-1"></i> Minimum Experience (Years)</span>
                             </label>
-                            <textarea class="form-control" id="job_description" name="job_description" 
-                                      rows="5" required></textarea>
+                            <input type="number" class="form-control form-control-custom" id="required_experience" name="required_experience" value="3" min="0" max="25">
                         </div>
+                        <div class="col-md-6">
+                            <label for="required_education" class="form-label form-label-custom">
+                                <span><i class="fas fa-graduation-cap text-success me-1"></i> Required Education</span>
+                            </label>
+                            <input type="text" class="form-control form-control-custom" id="required_education" name="required_education" value="Bachelor's or Master's degree in Computer Science">
+                        </div>
+                    </div>
 
-                        <!-- Requirements -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <label for="required_experience" class="form-label">
-                                    <strong>Required Experience (years)</strong>
-                                </label>
-                                <input type="number" class="form-control" id="required_experience" 
-                                       name="required_experience" value="2">
+                    <div class="weight-control mb-4" aria-labelledby="ranking_weights_title">
+                        <h6 class="mb-1" id="ranking_weights_title">Ranking priorities</h6>
+                        <p class="small text-secondary mb-3">Adjust how much each signal contributes. Values are normalized automatically.</p>
+                        <div class="row g-3">
+                            {% for key, label, value in [('semantic','Role context',45),('skill','Required skills',30),('experience','Experience',15),('education','Education',10)] %}
+                            <div class="col-md-6 col-xl-3">
+                                <label class="form-label-custom" for="{{ key }}_weight"><span>{{ label }}</span><output data-weight-label="{{ key }}">{{ value }}%</output></label>
+                                <input class="form-range" type="range" id="{{ key }}_weight" name="{{ key }}_weight" min="0" max="100" value="{{ value }}">
                             </div>
-                            <div class="col-md-6">
-                                <label for="required_education" class="form-label">
-                                    <strong>Required Education</strong>
-                                </label>
-                                <input type="text" class="form-control" id="required_education" 
-                                       name="required_education" value="Bachelor's degree">
-                            </div>
+                            {% endfor %}
                         </div>
+                    </div>
 
-                        <!-- Submit -->
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                <i class="fas fa-search"></i> Run Demo Screening
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary-gradient btn-lg py-3 fs-5 shadow" id="btn_run_demo">
+                            <i class="fas fa-play-circle me-2"></i> Run GPU Screening on Benchmark Resumes
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Custom Upload Promotion -->
+            <div class="text-center py-3">
+                <span class="text-secondary small">Want to test with your own custom candidate files?</span>
+                <a href="/upload" class="text-primary fw-semibold ms-1 text-decoration-none">
+                    Upload Your Resumes &amp; JD <i class="fas fa-arrow-right ms-1"></i>
+                </a>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Progressive Processing Overlay -->
+<div class="processing-overlay" id="processing_overlay">
+    <div class="stepper-box">
+        <div class="spinner-glow"></div>
+        <h4 class="fw-bold mb-2">Screening Candidates with AI</h4>
+        <p class="text-secondary small mb-4">Sentence-BERT GPU inference and skill-gap mining in progress...</p>
+
+        <div class="text-start fs-6 d-flex flex-column gap-2">
+            <div id="step_1" class="text-muted"><i class="far fa-circle me-2"></i> Vectorizing Job Description...</div>
+            <div id="step_2" class="text-muted"><i class="far fa-circle me-2"></i> Querying Benchmark Candidate Resumes...</div>
+            <div id="step_3" class="text-muted"><i class="far fa-circle me-2"></i> GPU Semantic Cosine Similarity Calculation...</div>
+            <div id="step_4" class="text-muted"><i class="far fa-circle me-2"></i> Extracting Matched vs Missing Skill Gaps...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectDemoRole(title, desc) {
+    document.getElementById('job_description').value = desc;
+    document.getElementById('selected_role_badge').textContent = 'Role: ' + title;
+
+    // Highlight selected card visually
+    document.querySelectorAll('.role-select-card').forEach(c => {
+        c.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+        c.style.boxShadow = 'none';
+    });
+    event.currentTarget.style.borderColor = 'var(--primary)';
+    event.currentTarget.style.boxShadow = '0 0 20px rgba(99, 102, 241, 0.25)';
+}
+
+// Auto-select first role on load if empty
+document.addEventListener('DOMContentLoaded', () => {
+    const firstRoleDesc = `{{ sample_jobs['AI / Machine Learning Engineer']|replace("`", "\\`") }}`;
+    const ta = document.getElementById('job_description');
+    if (ta && !ta.value.trim()) {
+        ta.value = firstRoleDesc;
+    }
+});
+</script>
 {% endblock %}

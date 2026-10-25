@@ -1,135 +1,509 @@
 {% extends "base.html" %}
 
+{% block title %}Screening Results & Candidate Ranking - TalentAI{% endblock %}
+
 {% block content %}
-<div class="container py-5">
-    <!-- Summary Cards -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card bg-primary text-white">
-                <div class="card-body text-center">
-                    <h3>{{ total_candidates|default(0) }}</h3>
-                    <p class="mb-0">Total Candidates</p>
-                </div>
+<div class="container py-5" id="results_page_container">
+    <!-- Page Header & Action Controls -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 pb-2 border-bottom border-secondary border-opacity-25">
+        <div>
+            <span class="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-30 px-3 py-1 rounded-pill mb-1">
+                <i class="fas fa-microchip me-1"></i> NLP Evaluation Complete
+            </span>
+            <h1 class="display-6 fw-bold mb-1">Candidate Screening Results</h1>
+            <p class="text-secondary small mb-0">
+                Ranked using Sentence-BERT embeddings, 500+ ontology skill matching, and experience fit.
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="/api/export-csv" class="btn btn-secondary-glass py-2 px-3" id="btn_export_csv">
+                <i class="fas fa-file-csv text-success me-1"></i> Export CSV
+            </a>
+            <button type="button" class="btn btn-secondary-glass py-2 px-3" onclick="window.print()" id="btn_print_report">
+                <i class="fas fa-print text-info me-1"></i> Print / PDF
+            </button>
+            <a href="/upload" class="btn btn-primary-gradient py-2 px-3" id="btn_screen_more">
+                <i class="fas fa-plus me-1"></i> Screen More
+            </a>
+        </div>
+    </div>
+
+    {% if run_id %}<p class="small text-muted mb-3">Saved locally · {{ run_saved_at }} · Run ID: <code>{{ run_id }}</code></p>{% endif %}
+
+    <!-- KPI Metric Summary Row -->
+    <div class="row g-3 mb-4" id="kpi_summary_row">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card text-center">
+                <div class="kpi-value text-white">{{ total_candidates|default(0) }}</div>
+                <div class="kpi-label"><i class="fas fa-users text-primary me-1"></i> Total Candidates</div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card bg-success text-white">
-                <div class="card-body text-center">
-                    <h3>{{ shortlisted_count|default(0) }}</h3>
-                    <p class="mb-0">Shortlisted</p>
-                </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card text-center">
+                <div class="kpi-value text-success">{{ shortlisted_count|default(0) }}</div>
+                <div class="kpi-label"><i class="fas fa-user-check text-success me-1"></i> Shortlisted Fit</div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card bg-info text-white">
-                <div class="card-body text-center">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card text-center">
+                <div class="kpi-value text-info">
                     {% if total_candidates and total_candidates > 0 %}
-                        <h3>{{ ((shortlisted_count / total_candidates) * 100)|round|int }}%</h3>
+                        {{ ((shortlisted_count / total_candidates) * 100)|round|int }}%
                     {% else %}
-                        <h3>0%</h3>
+                        0%
                     {% endif %}
-                    <p class="mb-0">Success Rate</p>
                 </div>
+
+                <div class="kpi-label"><i class="fas fa-chart-line text-info me-1"></i> Selection Rate</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card text-center">
+                <div class="kpi-value gradient-text">{{ avg_score|default(0) }}%</div>
+                <div class="kpi-label"><i class="fas fa-bullseye text-warning me-1"></i> Avg Match Score</div>
             </div>
         </div>
     </div>
 
-    <!-- Job Description -->
-    <div class="card mb-4">
-        <div class="card-header bg-secondary text-white">
-            <h5><i class="fas fa-briefcase"></i> Job Description</h5>
-        </div>
-        <div class="card-body">
-            <p>{{ job_description|default('No job description provided') }}</p>
-        </div>
-    </div>
-
-    <!-- Results Table -->
-    <div class="card">
-        <div class="card-header bg-dark text-white">
-            <h4><i class="fas fa-trophy"></i> Ranked Candidates</h4>
-        </div>
-        <div class="card-body">
-            {% if results and results|length > 0 %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Rank</th>
-                            <th>Candidate</th>
-                            <th>Final Score</th>
-                            <th>Semantic</th>
-                            <th>Keywords</th>
-                            <th>Experience</th>
-                            <th>Education</th>
-                            <th>Skills</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for result in results %}
-                        <tr class="{% if result.get('shortlisted', False) %}table-success{% endif %}">
-                            <td><strong>#{{ result.get('rank', loop.index) }}</strong></td>
-                            <td>{{ result.get('filename', 'Unknown') }}</td>
-                            <td>
-                                {% set final_score = result.get('final_score', 0) %}
-                                <strong>{{ (final_score * 100)|round|int }}%</strong>
-                                <div class="progress" style="height: 5px;">
-                                    <div class="progress-bar bg-primary" 
-                                         style="width: {{ (final_score * 100) | round|int }}%"></div>
-                                </div>
-                            </td>
-                            <td>{{ (result.get('semantic_score', 0) * 100)|round|int }}%</td>
-                            <td>{{ (result.get('keyword_score', 0) * 100)|round|int }}%</td>
-                            <td>{{ (result.get('experience_score', 0) * 100)|round|int }}%</td>
-                            <td>{{ (result.get('education_score', 0) * 100)|round|int }}%</td>
-                            <td>
-                                <small>
-                                    {% set skills = result.get('skills', []) %}
-                                    {% if skills and skills is not string and skills|length > 0 %}
-                                        {% for skill in skills[:5] %}
-                                            <span class="badge bg-secondary">{{ skill }}</span>
-                                        {% endfor %}
-                                        {% if skills|length > 5 %}
-                                            <span class="badge bg-light text-dark">+{{ skills|length - 5 }}</span>
-                                        {% endif %}
-                                    {% else %}
-                                        <span class="text-muted">N/A</span>
-                                    {% endif %}
-                                </small>
-                            </td>
-                            <td>
-                                {% if result.get('shortlisted', False) %}
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-check-circle"></i> Shortlisted
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-warning">
-                                        <i class="fas fa-times-circle"></i> Not Selected
-                                    </span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    {% if nlp_diagnostics %}
+    <div class="glass-panel p-3 mb-4 nlp-audit-panel">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div><strong><i class="fas fa-magnifying-glass-chart text-primary me-2"></i>NLP extraction checks</strong><div class="small text-muted">Review these edge cases alongside the score; detected mentions are not proof of proficiency.</div></div>
+            <div class="d-flex flex-wrap gap-2 small">
+                <span class="tag-pill tag-pill-cyan">{{ nlp_diagnostics.alias_candidates }} alias / abbreviation resumes</span>
+                <span class="tag-pill tag-pill-rose">{{ nlp_diagnostics.negated_candidates }} resumes with negated mentions</span>
+                <span class="tag-pill tag-pill-emerald">{{ nlp_diagnostics.project_candidates }} resumes with project skills</span>
             </div>
-            {% else %}
-            <div class="alert alert-warning text-center">
-                <i class="fas fa-exclamation-triangle"></i> No results to display
+        </div>
+        {% if nlp_diagnostics.negated_mentions %}<div class="small mt-2"><strong>Negated mentions excluded from skill matches:</strong> {{ nlp_diagnostics.negated_mentions|join(', ') }}</div>{% endif %}
+        {% if nlp_diagnostics.recognized_aliases %}<div class="small mt-1"><strong>Canonical skills recognized from aliases:</strong> {{ nlp_diagnostics.recognized_aliases|join(', ') }}</div>{% endif %}
+        {% if nlp_diagnostics.project_section_skills %}<div class="small mt-1"><strong>Skills found in project sections:</strong> {{ nlp_diagnostics.project_section_skills|join(', ') }}</div>{% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Active Job Criteria Card (Collapsible) -->
+    <div class="glass-panel p-4 mb-4" id="jd_summary_card">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-50 me-2">
+                    {{ parsed_jd.seniority|default('Mid-Level') }}
+                </span>
+                <strong class="fs-5 text-white">{{ parsed_jd.job_title|default('Target Job Role') }}</strong>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="tag-pill tag-pill-emerald">
+                    <i class="fas fa-clock"></i> {{ required_experience|default(0) }}+ Years Exp
+                </span>
+                <span class="tag-pill tag-pill-primary">
+                    <i class="fas fa-graduation-cap"></i> {{ required_education|default('Degree Required') }}
+                </span>
+                <button class="btn btn-sm btn-secondary-glass py-1 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#jd_collapse_details">
+                    <i class="fas fa-chevron-down"></i> Details
+                </button>
+            </div>
+        </div>
+
+        <div class="collapse mt-3 pt-3 border-top border-secondary border-opacity-25" id="jd_collapse_details">
+            <p class="text-secondary small mb-3">{{ job_description }}</p>
+            {% if parsed_jd and parsed_jd.all_skills %}
+            <div class="small">
+                {% if parsed_jd.core_skills %}<strong class="text-white-50">Required skills:</strong>
+                <div class="mt-1 mb-2">
+                    {% for skill in parsed_jd.core_skills %}
+                        <span class="tag-pill tag-pill-primary">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if parsed_jd.preferred_skills %}<strong class="text-white-50">Preferred skills:</strong>
+                <div class="mt-1">
+                    {% for skill in parsed_jd.preferred_skills %}<span class="tag-pill tag-pill-cyan">{{ skill }}</span>{% endfor %}
+                </div>{% endif %}
+                {% if not parsed_jd.core_skills and not parsed_jd.preferred_skills %}<strong class="text-white-50">Detected skills:</strong><div class="mt-1">{% for skill in parsed_jd.all_skills %}<span class="tag-pill tag-pill-primary">{{ skill }}</span>{% endfor %}</div>{% endif %}
             </div>
             {% endif %}
         </div>
     </div>
 
-    <!-- Action Buttons -->
-    <div class="mt-4 text-center">
-        <a href="/upload" class="btn btn-primary">
-            <i class="fas fa-upload"></i> Screen More Candidates
-        </a>
-        <a href="/" class="btn btn-secondary">
-            <i class="fas fa-home"></i> Back to Home
-        </a>
+    <!-- Interactive Filtering & Sorting Toolbar -->
+    <div class="filter-toolbar" id="filter_toolbar">
+        <div class="flex-grow-1" style="min-width: 240px;">
+            <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary border-opacity-50 text-muted">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input type="text" class="form-control form-control-custom border-start-0" id="candidate_search" placeholder="Search candidate, skill (e.g. Python, PyTorch), or role...">
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <div>
+                <select class="form-select form-control-custom py-2" id="filter_status">
+                    <option value="all">Status: All Candidates</option>
+                    <option value="shortlisted">Status: Shortlisted Only</option>
+                    <option value="unselected">Status: Non-Selected</option>
+                </select>
+            </div>
+            <div>
+                <select class="form-select form-control-custom py-2" id="filter_tier">
+                    <option value="all">Tier: All Frequencies</option>
+                    <option value="Strong Fit">Strong Fit (&gt; 70%)</option>
+                    <option value="Moderate Fit">Moderate Fit (50-69%)</option>
+                    <option value="Low Fit">Low Fit (&lt; 50%)</option>
+                </select>
+            </div>
+            <div>
+                <select class="form-select form-control-custom py-2" id="sort_by">
+                    <option value="score_desc">Sort: Highest Match Score</option>
+                    <option value="score_asc">Sort: Lowest Match Score</option>
+                    <option value="exp_desc">Sort: Experience (High to Low)</option>
+                    <option value="rank_asc">Sort: Original Rank</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert for zero filter results -->
+    <div id="no_filter_results" class="alert alert-secondary glass-panel text-center py-4 my-4" style="display: none;">
+        <i class="fas fa-filter text-warning fa-2x mb-2"></i>
+        <h5>No candidates match the selected filter criteria</h5>
+        <p class="text-muted small mb-0">Try adjusting your search terms or clearing status filters.</p>
+    </div>
+
+    <!-- Candidates Ranking Cards Container -->
+    <div id="candidates_container">
+        {% if results and results|length > 0 %}
+            {% for candidate in results %}
+            {% set score_pct = (candidate.final_score * 100)|round|int %}
+            {% set semantic_pct = (candidate.semantic_score * 100)|round|int %}
+            {% set skill_pct = candidate.skill_match_pct|default(0)|round|int %}
+            {% set is_shortlisted = candidate.shortlisted|default(false) %}
+
+            <div class="candidate-card candidate-card-item {% if is_shortlisted %}shortlisted-card{% endif %}"
+                 id="candidate_card_{{ candidate.rank }}"
+                 data-rank="{{ candidate.rank }}"
+                 data-score="{{ candidate.final_score }}"
+                 data-exp="{{ candidate.experience_years }}"
+                 data-name="{{ candidate.filename }}"
+                 data-skills="{{ (candidate.skills|default([]))|join(' ') }}"
+                 data-shortlisted="{{ 'true' if is_shortlisted else 'false' }}"
+                 data-tier="{{ candidate.match_tier|default('Moderate Fit') }}">
+
+                <div class="row align-items-center gy-3">
+                    <!-- Left: Rank & Checkbox for Comparison -->
+                    <div class="col-auto">
+                        <div class="form-check d-flex align-items-center gap-2">
+                            <input class="form-check-input compare-checkbox" type="checkbox" 
+                                   id="compare_cb_{{ candidate.rank }}"
+                                   data-candidate='{{ candidate|tojson }}'>
+                            <span class="badge {% if candidate.rank == 1 %}bg-warning text-dark{% elif candidate.rank == 2 %}bg-secondary text-white{% elif candidate.rank == 3 %}bg-danger text-white{% else %}bg-dark text-white-50 border border-secondary border-opacity-50{% endif %} fs-6 px-2 py-1">
+                                #{{ candidate.rank }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Candidate Name & Category -->
+                    <div class="col-md-3">
+                        <h5 class="text-white fw-bold mb-1 text-truncate" title="{{ candidate.filename }}">
+                            {{ candidate.filename }}
+                        </h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-secondary bg-opacity-25 text-white-50 small">
+                                {{ candidate.category|default('Applicant') }}
+                            </span>
+                            <span class="small text-muted">
+                                <i class="fas fa-clock me-1"></i>{{ candidate.experience_years }} Yrs
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Center: Metrics Breakdown Pills -->
+                    <div class="col-md-4">
+                        <div class="d-flex flex-column gap-1">
+                            <div class="d-flex justify-content-between small text-secondary">
+                                <span><i class="fas fa-brain text-primary me-1"></i> Semantic Fit:</span>
+                                <strong class="text-light">{{ semantic_pct }}%</strong>
+                            </div>
+                            <div class="progress" style="height: 4px; background: rgba(255,255,255,0.08);">
+                                <div class="progress-bar bg-primary" style="width: {{ semantic_pct }}%"></div>
+                            </div>
+
+                            <div class="d-flex justify-content-between small text-secondary mt-1">
+                                <span><i class="fas fa-list-check text-success me-1"></i> Skill Coverage:</span>
+                                <strong class="text-light">{{ skill_pct }}%</strong>
+                            </div>
+                            <div class="progress" style="height: 4px; background: rgba(255,255,255,0.08);">
+                                <div class="progress-bar bg-success" style="width: {{ skill_pct }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Radial Overall Score & Shortlist Badge -->
+                    <div class="col-auto ms-auto text-end d-flex align-items-center gap-3">
+                        <!-- Radial Meter -->
+                        <div class="radial-meter" title="Overall Match Score: {{ score_pct }}%">
+                            <svg width="68" height="68">
+                                <circle class="bg-ring" cx="34" cy="34" r="28"></circle>
+                                <circle class="progress-ring" cx="34" cy="34" r="28"
+                                        stroke="{{ '#10b981' if score_pct >= 70 else ('#6366f1' if score_pct >= 50 else '#f43f5e') }}"
+                                        stroke-dasharray="175.9"
+                                        stroke-dashoffset="{{ 175.9 - (175.9 * score_pct / 100) }}"></circle>
+                            </svg>
+                            <span class="radial-value text-white">{{ score_pct }}%</span>
+                        </div>
+
+                        <!-- Status Badge & Modal Trigger Button -->
+                        <div class="text-end" style="min-width: 140px;">
+                            {% if is_shortlisted %}
+                                <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-30 px-3 py-1 rounded-pill mb-2 d-inline-block">
+                                    <i class="fas fa-check-circle me-1"></i> Shortlisted
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary bg-opacity-25 text-white-50 border border-secondary border-opacity-25 px-3 py-1 rounded-pill mb-2 d-inline-block">
+                                    Not Selected
+                                </span>
+                            {% endif %}
+                            <br>
+                            <button type="button" class="btn btn-sm btn-secondary-glass py-1 px-3 fs-6" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#candidateDetailModal"
+                                    data-candidate='{{ candidate|tojson }}'>
+                                <i class="fas fa-chart-simple text-primary me-1"></i> View NLP Breakdown
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Skill Gap Pills Row -->
+                <div class="skill-gap-section mt-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-7">
+                            <small class="text-white-50 fw-semibold d-block mb-1">
+                                <i class="fas fa-circle-check text-success me-1"></i> Matched Skills:
+                            </small>
+                            <div>
+                                {% if candidate.matched_skills and candidate.matched_skills|length > 0 %}
+                                    {% for s in candidate.matched_skills[:8] %}
+                                        <span class="tag-pill tag-pill-emerald">{{ s }}</span>
+                                    {% endfor %}
+                                    {% if candidate.matched_skills|length > 8 %}
+                                        <span class="tag-pill tag-pill-emerald">+{{ candidate.matched_skills|length - 8 }} more</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted small">None directly matched</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <small class="text-white-50 fw-semibold d-block mb-1">
+                                <i class="fas fa-circle-xmark text-danger me-1"></i> Missing Critical:
+                            </small>
+                            <div>
+                                {% if candidate.missing_skills and candidate.missing_skills|length > 0 %}
+                                    {% for s in candidate.missing_skills[:5] %}
+                                        <span class="tag-pill tag-pill-rose">{{ s }}</span>
+                                    {% endfor %}
+                                    {% if candidate.missing_skills|length > 5 %}
+                                        <span class="tag-pill tag-pill-rose">+{{ candidate.missing_skills|length - 5 }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-success small"><i class="fas fa-check me-1"></i> Full Skill Coverage!</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-warning glass-panel text-center py-5">
+                <i class="fas fa-triangle-exclamation fa-3x text-warning mb-3"></i>
+                <h4>No Screening Results Available</h4>
+                <p class="text-muted">Please upload resumes or run the demo to generate candidate rankings.</p>
+                <a href="/upload" class="btn btn-primary-gradient mt-2">Go to Screen Resumes</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- CANDIDATE DETAIL MODAL -->
+<div class="modal fade modal-custom" id="candidateDetailModal" tabindex="-1" aria-labelledby="candidateDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-50" id="modal_cand_rank">#1</span>
+                    <h5 class="modal-title d-inline-block ms-2 text-white fw-bold" id="modal_cand_name">Candidate Details</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Top Summary Pill Stats -->
+                <div class="row g-2 text-center mb-4">
+                    <div class="col-3">
+                        <div class="glass-panel p-2">
+                            <div class="small text-muted">Overall Match</div>
+                            <strong class="fs-4 gradient-text" id="modal_cand_score">85%</strong>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="glass-panel p-2">
+                            <div class="small text-muted">Fit Tier</div>
+                            <strong class="fs-6 text-success" id="modal_cand_tier">Strong Fit</strong>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="glass-panel p-2">
+                            <div class="small text-muted">Experience</div>
+                            <strong class="fs-6 text-white" id="modal_cand_exp">3 Years</strong>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="glass-panel p-2">
+                            <div class="small text-muted">Education</div>
+                            <strong class="fs-6 text-info text-truncate d-block" id="modal_cand_edu">Bachelor's</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Multi-Factor NLP Score Bars -->
+                <h6 class="text-white fw-bold mb-3"><i class="fas fa-chart-column text-primary me-2"></i> Multi-Factor NLP Score Breakdown</h6>
+                <div class="glass-panel p-3 mb-4">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span><i class="fas fa-brain text-primary me-1"></i> Role context ({{ (scoring_weights.semantic * 100)|round|int }}% weight)</span>
+                            <span class="fw-bold" id="modal_bar_semantic_val">0%</span>
+                        </div>
+                        <div class="progress" style="height: 6px; background: rgba(255,255,255,0.08);">
+                            <div class="progress-bar bg-primary" id="modal_bar_semantic" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span><i class="fas fa-list-check text-success me-1"></i> Core skill coverage ({{ (scoring_weights.skill * 100)|round|int }}% weight)</span>
+                            <span class="fw-bold" id="modal_bar_skill_val">0%</span>
+                        </div>
+                        <div class="progress" style="height: 6px; background: rgba(255,255,255,0.08);">
+                            <div class="progress-bar bg-success" id="modal_bar_skill" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span><i class="fas fa-clock text-warning me-1"></i> Experience ({{ (scoring_weights.experience * 100)|round|int }}% weight)</span>
+                            <span class="fw-bold" id="modal_bar_exp_val">0%</span>
+                        </div>
+                        <div class="progress" style="height: 6px; background: rgba(255,255,255,0.08);">
+                            <div class="progress-bar bg-warning" id="modal_bar_exp" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span><i class="fas fa-graduation-cap text-info me-1"></i> Education ({{ (scoring_weights.education * 100)|round|int }}% weight)</span>
+                            <span class="fw-bold" id="modal_bar_edu_val">0%</span>
+                        </div>
+                        <div class="progress" style="height: 6px; background: rgba(255,255,255,0.08);">
+                            <div class="progress-bar bg-info" id="modal_bar_edu" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Skill Gap Breakdown -->
+                <h6 class="text-white fw-bold mb-3"><i class="fas fa-layer-group text-success me-2"></i> Complete Skill Gap Analysis</h6>
+                <div class="glass-panel p-3 mb-4">
+                    <div class="mb-3">
+                        <small class="text-success fw-bold d-block mb-1">✓ Matched Required Skills:</small>
+                        <div id="modal_matched_skills"></div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-danger fw-bold d-block mb-1">✗ Missing Critical Skills:</small>
+                        <div id="modal_missing_skills"></div>
+                    </div>
+                    <div>
+                        <small class="text-info fw-bold d-block mb-1">+ Additional Candidate Strengths (Bonus):</small>
+                        <div id="modal_bonus_skills"></div>
+                    </div>
+                </div>
+
+                <h6 class="text-white fw-bold mb-3"><i class="fas fa-clipboard-check text-success me-2"></i> Role requirements</h6>
+                <div class="glass-panel p-3 mb-4 requirement-checks">
+                    <div><span>Required skills</span><strong id="modal_requirement_skills">—</strong></div>
+                    <div><span>Minimum experience</span><strong id="modal_requirement_experience">—</strong></div>
+                    <div><span>Education</span><strong id="modal_requirement_education">—</strong></div>
+                </div>
+                <ul class="requirement-evidence mb-4 ps-3" id="modal_requirement_evidence"></ul>
+
+                <h6 class="text-white fw-bold mb-3"><i class="fas fa-quote-left text-primary me-2"></i> Evidence from resume</h6>
+                <div class="glass-panel p-3 mb-4">
+                    <p class="small text-muted mb-2">Matched skills below are supported by the candidate’s resume text. Confirm context during human review.</p>
+                    <ul class="evidence-list mb-0 ps-3" id="modal_skill_evidence"></ul>
+                </div>
+
+                <!-- Extracted Highlights -->
+                <h6 class="text-white fw-bold mb-3"><i class="fas fa-highlighter text-warning me-2"></i> NLP Career Milestones & Highlights</h6>
+                <div class="glass-panel p-3 mb-4">
+                    <ul class="mb-0 ps-3" id="modal_highlights_list"></ul>
+                </div>
+
+                <!-- Cleaned Resume Preview -->
+                <h6 class="text-white fw-bold mb-3"><i class="fas fa-file-lines text-secondary me-2"></i> Resume Text Preview</h6>
+                <div class="glass-panel p-3">
+                    <pre class="mb-0 text-secondary small" style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;" id="modal_resume_preview"></pre>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary-glass" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SIDE-BY-SIDE COMPARATOR FLOATING DRAWER -->
+<div class="comparison-drawer" id="comparison_drawer">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+            <div class="brand-icon-wrapper" style="width: 38px; height: 38px; font-size: 1rem;">
+                <i class="fas fa-scale-balanced"></i>
+            </div>
+            <div>
+                <strong class="text-white fs-6">Candidate Comparator</strong>
+                <div class="text-muted small">
+                    <span id="compare_selected_count" class="text-primary fw-bold">2</span> candidate(s) selected
+                </div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-secondary-glass" id="btn_clear_compare">Clear</button>
+            <button type="button" class="btn btn-primary-gradient px-4 py-2" id="btn_open_compare_modal">
+                <i class="fas fa-columns me-1"></i> Compare Side-by-Side
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- SIDE-BY-SIDE COMPARATOR MODAL -->
+<div class="modal fade modal-custom" id="comparatorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white fw-bold">
+                    <i class="fas fa-scale-balanced text-primary me-2"></i> Side-by-Side Candidate Evaluation Matrix
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-dark align-middle mb-0" id="compare_table">
+                        <thead id="compare_table_head"></thead>
+                        <tbody id="compare_table_body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary-glass" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

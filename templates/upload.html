@@ -1,64 +1,219 @@
 {% extends "base.html" %}
 
+{% block title %}Screen Candidates - Upload Resumes & Job Description | TalentAI{% endblock %}
+
 {% block content %}
-<div class="container py-5">
+<div class="container py-5" id="upload_page_container">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h3><i class="fas fa-upload"></i> Upload Resumes</h3>
-                </div>
-                <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
-                        <!-- Job Description -->
-                        <div class="mb-4">
-                            <label for="job_description" class="form-label">
-                                <strong>Job Description</strong> <span class="text-danger">*</span>
-                            </label>
-                            <textarea class="form-control" id="job_description" name="job_description" 
-                                      rows="6" required placeholder="Enter the job description here..."></textarea>
-                        </div>
+        <div class="col-lg-10 col-xl-9">
+            <!-- Header Title -->
+            <div class="text-center mb-4">
+                <span class="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-30 px-3 py-2 rounded-pill mb-2">
+                    <i class="fas fa-bolt me-1"></i> Automated Screening Workspace
+                </span>
+                <h1 class="display-6 fw-bold mb-2">Candidate Resume Screening</h1>
+                <p class="text-secondary fs-6">
+                    Provide your job description (upload a file or paste text) and upload candidate resumes to screen with deep NLP.
+                </p>
+            </div>
 
-                        <!-- Required Experience -->
-                        <div class="mb-4">
-                            <label for="required_experience" class="form-label">
-                                <strong>Required Experience (years)</strong>
-                            </label>
-                            <input type="number" class="form-control" id="required_experience" 
-                                   name="required_experience" value="0" min="0" max="30">
+            <form method="POST" enctype="multipart/form-data" id="screening_upload_form">
+                <!-- STEP 1: Job Description Card -->
+                <div class="glass-panel p-4 mb-4" id="jd_input_card">
+                    <div class="d-flex align-items-center justify-content-between mb-3 border-bottom border-secondary border-opacity-25 pb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary text-white p-2 rounded-circle fs-6" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">1</span>
+                            <h4 class="mb-0 fs-5">Job Description & Requirements</h4>
                         </div>
+                        <span class="text-muted small"><i class="fas fa-wand-magic-sparkles text-warning me-1"></i> Auto-Extracted via NLP</span>
+                    </div>
 
-                        <!-- Required Education -->
-                        <div class="mb-4">
-                            <label for="required_education" class="form-label">
-                                <strong>Required Education</strong>
-                            </label>
-                            <input type="text" class="form-control" id="required_education" 
-                                   name="required_education" placeholder="e.g., Bachelor's degree in Computer Science">
-                        </div>
+                    <!-- Dual Mode Tabs: File Upload vs Text -->
+                    <ul class="nav nav-pills mb-3 gap-2" id="jd_mode_tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tab_jd_file" data-bs-toggle="pill" data-bs-target="#panel_jd_file" type="button" role="tab">
+                                <i class="fas fa-file-arrow-up me-1"></i> Upload JD Document (Recommended)
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab_jd_text" data-bs-toggle="pill" data-bs-target="#panel_jd_text" type="button" role="tab">
+                                <i class="fas fa-keyboard me-1"></i> Paste Text or Presets
+                            </button>
+                        </li>
+                    </ul>
 
-                        <!-- Resume Upload -->
-                        <div class="mb-4">
-                            <label for="resumes" class="form-label">
-                                <strong>Upload Resumes</strong> <span class="text-danger">*</span>
-                            </label>
-                            <input class="form-control" type="file" id="resumes" name="resumes" 
-                                   multiple required accept=".pdf,.docx,.txt">
-                            <div class="form-text">
-                                Supported formats: PDF, DOCX, TXT (Max 16MB per file)
+                    <div class="tab-content mb-3" id="jd_tab_content">
+                        <!-- Tab 1: Upload JD File -->
+                        <div class="tab-pane fade show active" id="panel_jd_file" role="tabpanel">
+                            <div class="dropzone-container" id="jd_dropzone">
+                                <input type="file" id="jd_file" name="jd_file" class="d-none" accept=".pdf,.docx,.txt">
+                                <i class="fas fa-file-circle-check dropzone-icon"></i>
+                                <h6 class="fw-bold mb-1">Drag & drop your Job Description file here</h6>
+                                <p class="text-secondary small mb-2">Supported formats: PDF, DOCX, TXT</p>
+                                <span class="btn btn-secondary-glass py-1 px-3 fs-6">
+                                    <i class="fas fa-folder-open me-1"></i> Browse Computer
+                                </span>
+                            </div>
+                            <div class="small text-muted mt-2 d-flex align-items-center justify-content-between">
+                                <div id="jd_status_text">Upload a JD file to automatically extract title, experience, degrees, and skills.</div>
                             </div>
                         </div>
 
-                        <!-- Submit Button -->
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-search"></i> Screen Candidates
-                            </button>
+                        <!-- Tab 2: Paste Raw Text -->
+                        <div class="tab-pane fade" id="panel_jd_text" role="tabpanel">
+                            <!-- Preset Buttons -->
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                <span class="small text-secondary fw-semibold">Quick Role Presets:</span>
+                                <button type="button" class="btn btn-sm btn-secondary-glass py-1 px-2" onclick="loadJDPreset('ai_ml')">
+                                    🤖 AI / ML Engineer
+                                </button>
+                                <button type="button" class="btn btn-sm btn-secondary-glass py-1 px-2" onclick="loadJDPreset('fullstack')">
+                                    💻 Full Stack (Python/React)
+                                </button>
+                                <button type="button" class="btn btn-sm btn-secondary-glass py-1 px-2" onclick="loadJDPreset('datascientist')">
+                                    📊 Data Scientist
+                                </button>
+                                <button type="button" class="btn btn-sm btn-secondary-glass py-1 px-2" onclick="loadJDPreset('devops')">
+                                    ☁️ Cloud & DevOps
+                                </button>
+                            </div>
+
+                            <textarea class="form-control form-control-custom" id="job_description" name="job_description" rows="5" placeholder="Paste the job description, required technical skills, experience requirements, and responsibilities here..."></textarea>
+                            <div class="text-end mt-2">
+                                <button type="button" class="btn btn-sm btn-secondary-glass" id="btn_extract_jd_text">
+                                    <i class="fas fa-wand-magic-sparkles text-primary me-1"></i> Extract Requirements from Text (NLP)
+                                </button>
+                            </div>
                         </div>
-                    </form>
+                    </div>
+
+                    <!-- NLP Auto-Extracted Preview Container -->
+                    <div class="parsed-jd-card" id="jd_parsed_preview" style="display: none;">
+                        <!-- Injected dynamically by main.js after NLP parsing -->
+                    </div>
+
+                    <!-- Editable Criteria Overrides -->
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label for="required_experience" class="form-label form-label-custom">
+                                <span><i class="fas fa-clock text-primary me-1"></i> Minimum Required Experience</span>
+                                <span class="badge bg-secondary bg-opacity-25 text-white-50">Years</span>
+                            </label>
+                            <input type="number" class="form-control form-control-custom" id="required_experience" name="required_experience" value="2" min="0" max="30">
+                            <div class="form-text text-muted small">Auto-detected from JD or customize manually.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="required_education" class="form-label form-label-custom">
+                                <span><i class="fas fa-graduation-cap text-success me-1"></i> Required Education & Field</span>
+                                <span class="badge bg-secondary bg-opacity-25 text-white-50">Degree</span>
+                            </label>
+                            <input type="text" class="form-control form-control-custom" id="required_education" name="required_education" value="Bachelor's degree in Computer Science or related field">
+                            <div class="form-text text-muted small">Auto-detected degree level and field of study.</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+
+                <div class="glass-panel p-4 mb-4 weight-control" aria-labelledby="ranking_weights_title">
+                    <h4 class="fs-5 mb-1" id="ranking_weights_title">Ranking priorities</h4>
+                    <p class="small text-secondary mb-3">Adjust how much each signal contributes to the overall ranking. The values are normalized automatically.</p>
+                    <div class="row g-3">
+                        {% for key, label, value in [('semantic','Role context',45),('skill','Required skills',30),('experience','Experience',15),('education','Education',10)] %}
+                        <div class="col-md-6 col-xl-3">
+                            <label class="form-label-custom" for="{{ key }}_weight"><span>{{ label }}</span><output data-weight-label="{{ key }}">{{ value }}%</output></label>
+                            <input class="form-range" type="range" id="{{ key }}_weight" name="{{ key }}_weight" min="0" max="100" value="{{ value }}">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- STEP 2: Candidate Resumes Batch Upload Card -->
+                <div class="glass-panel p-4 mb-4" id="resumes_upload_card">
+                    <div class="d-flex align-items-center justify-content-between mb-3 border-bottom border-secondary border-opacity-25 pb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success text-white p-2 rounded-circle fs-6" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">2</span>
+                            <h4 class="mb-0 fs-5">Upload Candidate Resumes</h4>
+                        </div>
+                        <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-30 px-3 py-1 rounded-pill" id="resume_count_badge">
+                            0 files staged
+                        </span>
+                    </div>
+
+                    <div class="dropzone-container" id="resumes_dropzone">
+                        <input type="file" id="resumes" name="resumes" multiple required accept=".pdf,.docx,.txt" class="d-none">
+                        <i class="fas fa-cloud-arrow-up dropzone-icon" style="color: var(--accent-emerald);"></i>
+                        <h6 class="fw-bold mb-1">Drag & drop multiple resume files here</h6>
+                        <p class="text-secondary small mb-2">Accepts PDF, DOCX, and TXT files (Up to 32MB total)</p>
+                        <span class="btn btn-secondary-glass py-1 px-3 fs-6">
+                            <i class="fas fa-folder-open me-1"></i> Browse Resumes
+                        </span>
+                    </div>
+
+                    <!-- Staged File Chips Preview -->
+                    <div class="file-chips-wrapper" id="resume_chips_wrapper"></div>
+                </div>
+
+                <!-- STEP 3: Screening Options & Fair AI Settings -->
+                <div class="glass-panel p-4 mb-4" id="options_card">
+                    <div class="d-flex align-items-center gap-2 mb-3 border-bottom border-secondary border-opacity-25 pb-3">
+                        <span class="badge bg-info text-white p-2 rounded-circle fs-6" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">3</span>
+                        <h4 class="mb-0 fs-5">Screening Preferences</h4>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="anonymize" name="anonymize">
+                        <label class="form-check-label fw-semibold text-light" for="anonymize">
+                            <i class="fas fa-user-shield text-info me-1"></i> Enable Blind / Fair Screening (PII Anonymization)
+                        </label>
+                        <div class="text-muted small ps-1">
+                            Uses spaCy Named Entity Recognition to redact candidate names, emails, phone numbers, and addresses to eliminate unconscious hiring bias.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Action Button -->
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary-gradient btn-lg py-3 px-5 fs-5 shadow-lg w-100" id="btn_submit_screening">
+                        <i class="fas fa-microchip me-2"></i> Start NLP Candidate Screening
+                    </button>
+                    <p class="text-muted small mt-2">
+                        Powered by Sentence-BERT embeddings (GPU) and 500+ Skill Ontology matching.
+                    </p>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+
+<!-- Progressive Processing Overlay -->
+<div class="processing-overlay" id="processing_overlay">
+    <div class="stepper-box">
+        <div class="spinner-glow"></div>
+        <h4 class="fw-bold mb-2">Screening Candidates with AI</h4>
+        <p class="text-secondary small mb-4">Please wait while our natural language models evaluate resumes...</p>
+
+        <div class="text-start fs-6 d-flex flex-column gap-2">
+            <div id="step_1" class="text-muted"><i class="far fa-circle me-2"></i> Extracting Resume & JD text...</div>
+            <div id="step_2" class="text-muted"><i class="far fa-circle me-2"></i> SpaCy Entity & 500+ Skill Ontology Mining...</div>
+            <div id="step_3" class="text-muted"><i class="far fa-circle me-2"></i> Sentence-BERT GPU Semantic Vectorization...</div>
+            <div id="step_4" class="text-muted"><i class="far fa-circle me-2"></i> Calculating Skill Gap & Ranking Candidates...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+function loadJDPreset(roleKey) {
+    const presets = {
+        'ai_ml': "We are looking for an AI/Machine Learning Engineer to build and deploy deep learning and NLP models. Required skills: Python, PyTorch, TensorFlow, Hugging Face Transformers, Large Language Models (LLMs), RAG, LangChain, vector databases, Docker, and AWS. Minimum 3 years of hands-on experience in machine learning. Bachelor's or Master's degree in Computer Science, Data Science, or related field.",
+        'fullstack': "Seeking a Senior Full Stack Developer. Required skills: Python, Django, FastAPI, JavaScript, TypeScript, React, Next.js, Redux, HTML5, CSS3, REST APIs, PostgreSQL, Redis, Docker, and Git. Minimum 4 years of professional web development experience. Bachelor's degree in Computer Science or Software Engineering required.",
+        'datascientist': "We are hiring a Data Scientist with expertise in predictive modeling and statistical analysis. Must be proficient in Python, R, SQL, Pandas, NumPy, Scikit-learn, Tableau, and data visualization. Minimum 2 years of relevant experience. Master's degree in Data Science, Statistics, or Mathematics.",
+        'devops': "Looking for a Cloud DevOps Engineer to maintain our cloud infrastructure. Must have solid experience with Linux, AWS, Docker, Kubernetes, Terraform, Ansible, CI/CD with GitHub Actions, and Prometheus. Minimum 3 years of experience. Bachelor's degree in Computer Science."
+    };
+    const ta = document.getElementById('job_description');
+    if (ta && presets[roleKey]) {
+        ta.value = presets[roleKey];
+        // Trigger extraction
+        document.getElementById('btn_extract_jd_text').click();
+    }
+}
+</script>
 {% endblock %}

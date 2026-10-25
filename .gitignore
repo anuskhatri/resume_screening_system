@@ -69,6 +69,9 @@ Thumbs.db
 # data/raw/*
 # data/processed/*
 
+# Locally saved candidate screening runs may contain personal resume data
+results/screening_runs/
+
 # Model files (optional - uncomment if models are too large)
 # models/*.pkl
 # models/*.h5

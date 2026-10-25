@@ -3,8 +3,8 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from src.config import Config
-from traning.data_preprocessing import DataPreprocessor
-from inference.resume_ranking import ResumeRanker
+from src.training.data_preprocessing import DataPreprocessor
+from src.inference.resume_ranking import ResumeRanker
 import pandas as pd
 
 def main():

@@ -26,13 +26,14 @@ class Config:
     MAX_LENGTH = 512
     
     # Scoring Weights
-    SEMANTIC_WEIGHT = 0.70
-    KEYWORD_WEIGHT = 0.15
-    EXPERIENCE_WEIGHT = 0.10
-    EDUCATION_WEIGHT = 0.05
+    SEMANTIC_WEIGHT = 0.45
+    SKILL_WEIGHT = 0.30
+    EXPERIENCE_WEIGHT = 0.15
+    EDUCATION_WEIGHT = 0.10
+    KEYWORD_WEIGHT = 0.00
     
     # Threshold
-    SHORTLIST_THRESHOLD = 0.65
+    SHORTLIST_THRESHOLD = 0.60
     
     print(f"Using device: {DEVICE}")
     if torch.cuda.is_available():

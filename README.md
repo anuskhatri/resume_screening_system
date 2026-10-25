@@ -1,527 +1,424 @@
-# 🎯 AI-Powered Resume Screening System
-
-<div align="center">
-
-![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
-![Flask](https://img.shields.io/badge/Flask-2.3+-green.svg)
-![Transformers](https://img.shields.io/badge/🤗_Transformers-4.30+-yellow.svg)
-![License](https://img.shields.io/badge/License-MIT-purple.svg)
-![Stars](https://img.shields.io/github/stars/Elson1603/resume_screening_system?style=social)
-
-**Automate your hiring process with AI-powered resume screening and intelligent candidate ranking! **
-
-[Features](#-features) • [Demo](#-demo) • [Installation](#-installation) • [Usage](#-usage) • [Architecture](#-architecture) • [API](#-api) • [Contributing](#-contributing)
-
-</div>
-
----
-
-## 📋 Table of Contents
+# Fieldnote — Resume Screening System
 
-- [Overview](#-overview)
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [Usage](#-usage)
-- [Project Structure](#-project-structure)
-- [How It Works](#-how-it-works)
-- [Configuration](#-configuration)
-- [API Documentation](#-api-documentation)
-- [Results & Performance](#-results--performance)
-- [Contributing](#-contributing)
-- [License](#-license)
-- [Contact](#-contact)
+Fieldnote is a Flask-based NLP application for reviewing resumes against a job description. It extracts text from PDF, DOCX, and TXT files, identifies role and candidate attributes, computes semantic and skills-based fit signals, ranks candidates, and presents evidence for a recruiter to review.
 
----
+The project includes a web interface, a sample-data demo, a command-line ranking example, and a separate training pipeline for resume-category classification.
 
-## 🌟 Overview
+> **Decision-support tool:** Scores and extracted attributes are estimates. Review the source resume and supporting evidence before making hiring decisions. The system does not make or recommend a final hiring decision.
 
-The **AI-Powered Resume Screening System** is an intelligent solution designed to revolutionize the recruitment process. Using advanced Natural Language Processing (NLP) and Machine Learning techniques, this system automatically analyzes, ranks, and shortlists candidates based on job requirements.
+## Contents
 
+- [What the application does](#what-the-application-does)
+- [How the NLP pipeline works](#how-the-nlp-pipeline-works)
+- [Ranking and score interpretation](#ranking-and-score-interpretation)
+- [Requirements](#requirements)
+- [Install and run locally](#install-and-run-locally)
+- [Use the web application](#use-the-web-application)
+- [Routes and API](#routes-and-api)
+- [Saved screening runs](#saved-screening-runs)
+- [Training and evaluation](#training-and-evaluation)
+- [Command-line example](#command-line-example)
+- [Configuration](#configuration)
+- [Project structure](#project-structure)
+- [Privacy and deployment notes](#privacy-and-deployment-notes)
+- [Known limitations](#known-limitations)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
 
+## What the application does
 
-> *Upload resumes, define job requirements, and get ranked candidates in seconds!*
+- Accepts job descriptions and batches of resumes in PDF, DOCX, and TXT formats.
+- Parses job descriptions for a role title, seniority, minimum experience, education, skills, and responsibilities.
+- Splits detected skills into core and preferred groups when the job description uses recognizable section headings.
+- Extracts candidate skills, experience, education, and selected resume highlights.
+- Compares the job description and resumes with Sentence-BERT embeddings and cosine similarity.
+- Combines semantic fit, core-skill coverage, experience alignment, and education alignment into a configurable score.
+- Shows ranked candidates, matched and missing skills, requirement checks, score components, and resume evidence.
+- Flags alias and abbreviation matches, negated skill mentions, and skills found in project sections for recruiter review.
+- Saves successful screening runs as local JSON files and exports the latest in-process result set as CSV.
+- Offers a demo that extracts and evaluates a reproducible sample of up to 40 actual PDF resumes from `resume dataset/data/`.
 
----
+The landing-page name is **Fieldnote**. The Python package and repository are referred to as the Resume Screening System in code and artifacts.
 
-## ✨ Features
+## How the NLP pipeline works
 
-<table>
-  <tr>
-    <td width="33%" align="center">
-      <h3>📄 Multi-Format Support</h3>
-      <p>Upload resumes in PDF, DOCX, or TXT formats</p>
-    </td>
-    <td width="33%" align="center">
-      <h3>🤖 AI-Powered Ranking</h3>
-      <p>Uses transformer models for semantic understanding</p>
-    </td>
-    <td width="33%" align="center">
-      <h3>⚡ Real-time Processing</h3>
-      <p>Get instant candidate rankings and insights</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="33%" align="center">
-      <h3>🎯 Smart Matching</h3>
-      <p>Matches skills, experience, and education</p>
-    </td>
-    <td width="33%" align="center">
-      <h3>📊 Detailed Analytics</h3>
-      <p>Comprehensive scoring and visualization</p>
-    </td>
-    <td width="33%" align="center">
-      <h3>🌐 Web Interface</h3>
-      <p>User-friendly Flask-based web application</p>
-    </td>
-  </tr>
-</table>
+### 1. Document extraction
 
-### 🔑 Key Capabilities
+The Flask application extracts text with PyPDF2 for PDF, python-docx for DOCX, and Python's text reader for TXT. The upload limit is 32 MB for the complete request. Temporary uploaded documents are removed after extraction.
 
-- ✅ **Semantic Text Analysis** - Goes beyond keyword matching with deep learning
-- ✅ **Experience Extraction** - Automatically identifies years of experience
-- ✅ **Skills Detection** - Extracts technical and soft skills from resumes
-- ✅ **Education Matching** - Validates educational qualifications
-- ✅ **Batch Processing** - Handle multiple resumes simultaneously
-- ✅ **Customizable Criteria** - Define your own job requirements
-- ✅ **Export Results** - Download ranked candidates as CSV
+Scanned PDFs without an embedded text layer may produce no usable text; OCR is not currently included.
 
----
+### 2. Text preparation and skill extraction
 
-## 🛠️ Tech Stack
+The TextCleaner in src/inference/utils.py performs these tasks:
 
-<div align="center">
+- Cleans text used for embeddings by lowercasing it, removing URLs and email addresses, removing digits and most punctuation, and collapsing whitespace.
+- Uses NLTK tokenization, English stop-word removal, and WordNet lemmatization for embedding input.
+- Matches skills from the taxonomy in src/inference/skill_ontology.py with word-boundary-aware patterns and canonicalizes known aliases.
+- Extracts experience years with regular expressions and identifies an education level using degree keywords.
+- Selects a small set of career-highlight sentences using sentence tokenization and action-word heuristics.
+- Optionally redacts email addresses, phone numbers, selected profile URLs, and PERSON entities found in the first 500 characters of the resume.
 
-| Category | Technologies |
-|----------|-------------|
-| **Backend** | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) ![Flask](https://img.shields.io/badge/Flask-000000?style=flat&logo=flask&logoColor=white) |
-| **AI/ML** | ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat&logo=pytorch&logoColor=white) ![HuggingFace](https://img.shields.io/badge/🤗_Transformers-FFD21E?style=flat) ![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E? style=flat&logo=scikit-learn&logoColor=white) |
-| **NLP** | ![NLTK](https://img.shields.io/badge/NLTK-154f3c?style=flat) ![spaCy](https://img.shields.io/badge/spaCy-09A3D5?style=flat&logo=spacy&logoColor=white) ![Sentence Transformers](https://img.shields.io/badge/Sentence_Transformers-orange?style=flat) |
-| **Data** | ![Pandas](https://img.shields.io/badge/Pandas-150458?style=flat&logo=pandas&logoColor=white) ![NumPy](https://img.shields.io/badge/NumPy-013243? style=flat&logo=numpy&logoColor=white) |
-| **Visualization** | ![Matplotlib](https://img.shields.io/badge/Matplotlib-11557c?style=flat) ![Seaborn](https://img.shields.io/badge/Seaborn-9cf?style=flat) |
+The raw resume text is still used for extraction, evidence, and previews. The cleaned and lemmatized text is used for semantic embeddings.
 
-</div>
+### 3. Job-description parsing
 
----
+JobDescriptionParser in src/inference/jd_parser.py uses regular expressions and heading heuristics to estimate:
 
-## 📦 Installation
+- Role title and seniority
+- Minimum years of experience
+- Education level and a possible field of study
+- Skills, partitioned into core and preferred where section headings can be recognized
+- Responsibilities from labeled sections or action-oriented lines
 
-### Prerequisites
+If no clear preferred-skills section is detected, skills generally default to the core group. Parsing results should be checked and can be edited in the upload form.
 
-- Python 3.8 or higher
-- pip package manager
-- Virtual environment (recommended)
+### 4. Semantic similarity
 
-### Step-by-Step Installation
+FeatureExtractor loads sentence-transformers/all-MiniLM-L6-v2, which produces 384-dimensional embeddings. The job description and each resume are encoded, then cosine similarity is calculated. PyTorch uses CUDA when available and otherwise falls back to CPU.
 
-1. **Clone the repository**
+The embedding model is downloaded from Hugging Face on first use unless it is already cached locally. Internet access is therefore needed for initial setup when the model is not present in the cache.
 
-```bash
-git clone https://github.com/Elson1603/resume_screening_system.git
-cd resume_screening_system
-```
+### 5. Candidate ranking and evidence
 
-2. **Create a virtual environment**
+ResumeRanker in src/inference/resume_ranking.py computes four score components and sorts candidates by their weighted total. It also returns skill gaps, highlights, qualification checks, and short evidence excerpts for matched skills, experience, and education where text can be found.
 
-```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
+The score is a prioritization aid, not a probability that a person will succeed in a role. The final decision should account for context that the parser cannot reliably infer.
 
-# macOS/Linux
-python3 -m venv venv
-source venv/bin/activate
-```
+## Ranking and score interpretation
 
-3. **Install dependencies**
+The default weights are:
 
-```bash
-pip install -r requirements.txt
-```
+| Signal | Default weight | What it represents |
+|---|---:|---|
+| Role context | 45% | Cosine similarity between job-description and resume embeddings |
+| Core-skill coverage | 30% | Matched core skills divided by detected core skills |
+| Experience | 15% | Candidate years relative to the stated minimum, capped at a full score when the minimum is met |
+| Education | 10% | Heuristic comparison of detected degree levels |
 
-4. **Download required NLP models**
+The upload and demo forms let the recruiter adjust these four weights. The server normalizes the selected values so they sum to one before ranking. Setting every slider to zero restores the defaults.
 
-```bash
-python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet')"
-python -m spacy download en_core_web_sm
-```
+Conceptually, the score is:
 
-5. **Create necessary directories**
+    final score = semantic weight × semantic score
+                + skill weight × core-skill coverage
+                + experience weight × experience score
+                + education weight × education score
 
-```bash
-mkdir -p uploads data models results
-```
+The separate requirement indicators show whether core skills, minimum experience, and education appear to be met. They do not automatically exclude a candidate. Shortlisting is currently based on the configured composite-score threshold, not a strict hard-requirement gate.
 
----
+Other score details:
 
-## 🚀 Quick Start
+- Semantic similarity is based on the pre-trained embedding model, not the resume-category classifier trained in this repository.
+- Missing degree text receives a neutral education score in the composite, while the detail view marks the requirement for review when there is no degree evidence.
+- Experience is extracted heuristically. If no required experience is supplied, the experience component receives a full score.
+- The keyword-overlap score is calculated for analysis but is not part of the composite ranking formula.
+- Fit labels are Strong Fit at 70% or above, Moderate Fit from 50% to below 70%, and Low Fit below 50%.
+- The shortlist threshold is 60% by default, as defined in src/config.py.
 
-### Running the Web Application
-
-```bash
-python app.py
-```
-
-Then open your browser and navigate to: 
-```
-http://localhost:5000
-```
-
-### Running CLI Version
+### NLP extraction checks
 
-```bash
-python main.py
-```
-
----
-
-## 💻 Usage
-
-### Web Interface
-
-1. **Start the Application**
-   ```bash
-   python app.py
-   ```
-
-2. **Upload Resumes**
-   - Navigate to the upload page
-   - Select multiple resume files (PDF, DOCX, TXT)
-   - Enter job description
-   - Set required experience (years)
-   - Specify required education level
-
-3. **View Results**
-   - See ranked candidates with scores
-   - View detailed analytics
-   - Export results as CSV
-
-### Command Line Interface
-
-```python
-from src.inference. resume_ranking import ResumeRanker
-import pandas as pd
-
-# Initialize ranker
-ranker = ResumeRanker()
-
-# Define job requirements
-job_description = """
-We are looking for a Python Developer with experience in Machine Learning. 
-Strong skills in Python, TensorFlow, and scikit-learn required. 
-Minimum 2 years of experience. 
-"""
-
-# Load and process resumes
-df_resumes = pd.read_csv('data/resumes.csv')
-
-# Rank candidates
-scores_df = ranker.rank_candidates(
-    df_resumes,
-    job_description,
-    required_experience=2,
-    required_education="Bachelor's degree"
-)
-
-# Display top candidates
-ranker.display_top_candidates(scores_df, top_n=10)
-```
-
----
-
-## 📁 Project Structure
-
-```
-resume_screening_system/
-│
-├── 📄 app.py                          # Flask web application
-├── 📄 main.py                         # CLI entry point
-├── 📄 requirements.txt                # Project dependencies
-├── 📄 generate_results_documentation.py  # Results generator
-│
-├── 📂 src/                            # Source code
-│   ├── 📄 config.py                   # Configuration settings
-│   ├── 📂 training/                   # Training modules
-│   │   ├── 📄 data_preprocessing.py   # Data preprocessing
-│   │   └── 📄 model_trainer.py        # Model training
-│   └── 📂 inference/                  # Inference modules
-│       ├── 📄 resume_ranking.py       # Main ranking logic
-│       └── 📄 utils.py                # Utility functions
-│
-├── 📂 templates/                      # HTML templates
-│   └── 📄 index.html                  # Web interface
-│
-├── 📂 static/                         # Static files (CSS, JS, images)
-│
-├── 📂 data/                           # Data directory
-│   ├── 📂 raw/                        # Raw resume data
-│   └── 📂 processed/                  # Processed data
-│
-├── 📂 models/                         # Trained models
-│
-├── 📂 results/                        # Output results
-│
-└── 📂 uploads/                        # Uploaded resumes
-```
-
----
-
-## 🧠 How It Works
-
-```mermaid
-graph LR
-    A[Upload Resumes] --> B[Text Extraction]
-    B --> C[Text Cleaning]
-    C --> D[Feature Extraction]
-    D --> E[Embedding Generation]
-    E --> F[Similarity Calculation]
-    F --> G[Score Aggregation]
-    G --> H[Candidate Ranking]
-    H --> I[Results Display]
-```
-
-### Processing Pipeline
-
-1. **📥 Document Ingestion**
-   - Accepts PDF, DOCX, and TXT files
-   - Extracts raw text from documents
-
-2. **🧹 Text Preprocessing**
-   - Removes special characters and noise
-   - Tokenization and lemmatization
-   - Stopword removal
-
-3. **🔍 Feature Extraction**
-   - Skills extraction using keyword matching
-   - Experience years detection with regex
-   - Education level identification
-
-4. **🤖 Semantic Analysis**
-   - Generates embeddings using Sentence Transformers
-   - Calculates semantic similarity with job description
-   - Uses cosine similarity for matching
-
-5. **📊 Scoring & Ranking**
-   - Combines multiple signals: 
-     - Semantic similarity (40%)
-     - Skills match (30%)
-     - Experience alignment (20%)
-     - Education match (10%)
-   - Generates final composite score
-
-6. **✅ Candidate Shortlisting**
-   - Ranks candidates by final score
-   - Flags top candidates for shortlisting
-   - Provides detailed breakdown
-
----
-
-## ⚙️ Configuration
-
-Edit `src/config.py` to customize settings:
-
-```python
-class Config:
-    # Directories
-    DATA_DIR = 'data'
-    MODELS_DIR = 'models'
-    RESULTS_DIR = 'results'
-    
-    # Model settings
-    EMBEDDING_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
-    
-    # Scoring weights
-    SIMILARITY_WEIGHT = 0.4
-    SKILLS_WEIGHT = 0.3
-    EXPERIENCE_WEIGHT = 0.2
-    EDUCATION_WEIGHT = 0.1
-    
-    # Thresholds
-    SHORTLIST_THRESHOLD = 0.65
-```
-
----
-
-## 📖 API Documentation
-
-### REST API Endpoints
-
-#### Upload and Rank Resumes
-
-```http
-POST /api/rank
-Content-Type: multipart/form-data
-
-Parameters:
-- resumes:  File[] (resume files)
-- job_description: string
-- required_experience: integer
-- required_education: string
-
-Response:
-{
-  "status": "success",
-  "total_candidates": 25,
-  "shortlisted":  8,
-  "results": [
-    {
-      "filename": "john_doe.pdf",
-      "final_score": 0.8542,
-      "skills_match": 0.85,
-      "experience_match": 0.90,
-      "shortlisted": true
-    },
-    ...
-  ]
-}
-```
-
-#### Get Candidate Details
-
-```http
-GET /api/candidate/{id}
-
-Response:
-{
-  "id": "123",
-  "name": "John Doe",
-  "score": 0.8542,
-  "skills": ["Python", "Machine Learning", "TensorFlow"],
-  "experience_years": 4,
-  "education": "Master's Degree"
-}
-```
-
----
-
-## 📊 Results & Performance
-
-### Performance Metrics
-
-| Metric | Value |
-|--------|-------|
-| **Accuracy** | 87.3% |
-| **Precision** | 84.6% |
-| **Recall** | 89.1% |
-| **F1-Score** | 86.8% |
-| **Processing Speed** | ~2 sec/resume |
-
-### Sample Results
-
-Check out [RESULTS_SUMMARY.md](RESULTS_SUMMARY.md) for detailed analysis and benchmarks.
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how you can help:
-
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/AmazingFeature
-   ```
-3. **Commit your changes**
-   ```bash
-   git commit -m 'Add some AmazingFeature'
-   ```
-4. **Push to the branch**
-   ```bash
-   git push origin feature/AmazingFeature
-   ```
-5. **Open a Pull Request**
+The results page summarizes three kinds of edge cases across the current run:
 
-### Development Guidelines
+- **Aliases and abbreviations:** recognized spellings are mapped to canonical skills where defined in the ontology.
+- **Negated mentions:** common phrases such as “no experience with Python” are excluded from positive skill matches and listed for review.
+- **Project-section mentions:** skills found under a recognizable Projects heading are identified so reviewers can consider their context.
 
-- Follow PEP 8 style guide
-- Add unit tests for new features
-- Update documentation
-- Ensure all tests pass
+These checks are heuristic. They do not determine how recently, deeply, or independently a candidate used a skill. Project mentions still count as detected candidate skills; the interface surfaces the context rather than treating project work as equivalent to employment experience.
 
----
+## Requirements
 
-## 🐛 Troubleshooting
+- Python 3.10 or later is recommended. The included Dockerfile uses Python 3.10; the local development environment has also been run with Python 3.12.
+- pip and a virtual environment.
+- Internet access on first setup to install dependencies, download NLTK/spaCy resources, and fetch the Sentence-BERT model if it is not cached.
+- GPU is optional. CUDA-capable PyTorch and a compatible NVIDIA setup can accelerate embedding generation; CPU inference is supported but slower.
 
-<details>
-<summary><b>Issue:  NLTK data not found</b></summary>
+Dependencies are listed in requirements.txt. Training plots additionally use Matplotlib and Seaborn, which are included there.
 
-```bash
-python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet')"
-```
-</details>
+## Install and run locally
 
-<details>
-<summary><b>Issue: spaCy model not found</b></summary>
+Run commands from the project root directory (the directory containing app.py and requirements.txt).
 
-```bash
-python -m spacy download en_core_web_sm
-```
-</details>
+### Windows PowerShell
 
-<details>
-<summary><b>Issue: Memory error with large files</b></summary>
+    py -3.12 -m venv .venv
+    .\.venv\Scripts\Activate.ps1
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+    python -m spacy download en_core_web_sm
+    python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('stopwords'); nltk.download('wordnet')"
+    python app.py
 
-Reduce batch size in `config.py` or process resumes in smaller batches.
-</details>
+If the Python launcher does not have 3.12 installed, use an installed compatible version with python -m venv .venv.
 
----
+### macOS or Linux
 
-## 🎯 Roadmap
+    python3 -m venv .venv
+    source .venv/bin/activate
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+    python -m spacy download en_core_web_sm
+    python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('stopwords'); nltk.download('wordnet')"
+    python app.py
 
-- [x] Basic resume screening
-- [x] Multi-format support
-- [x] Web interface
-- [ ] Real-time notifications
-- [ ] Email integration
-- [ ] Advanced analytics dashboard
-- [ ] Multi-language support
-- [ ] ATS integration
-- [ ] Mobile application
-- [ ] API authentication
+Open http://localhost:5000 after the model has finished loading. The first startup may take longer because the Sentence-BERT model is loaded into memory.
 
----
+The port can be changed with the PORT environment variable. For example, in PowerShell:
 
-## 📝 License
+    $env:PORT = "5001"
+    python app.py
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+The development server currently binds to all network interfaces. See [Privacy and deployment notes](#privacy-and-deployment-notes) before exposing it beyond a trusted local environment.
 
----
+## Use the web application
 
-## 👨‍💻 Author
+### Screen uploaded resumes
 
-**Elson1603**
+1. Open **Review candidates** or go to /upload.
+2. Add a job description as a PDF, DOCX, or TXT file, or paste the text in the form.
+3. Review or adjust the detected minimum experience, education, and ranking weights.
+4. Upload one or more candidate resumes. Supported formats are PDF, DOCX, and TXT; the complete request must be under 32 MB.
+5. Optionally enable the anonymization pass. Review the results and their evidence; correct parser assumptions using the original resume as needed.
+6. Export the current result set as CSV if required.
 
-- GitHub: [@Elson1603](https://github.com/Elson1603)
-- Repository: [resume_screening_system](https://github.com/Elson1603/resume_screening_system)
+### Run the sample-data demo
 
----
+1. Open **Sample review** or go to /demo.
+2. Choose one of the sample roles or edit the job-description text.
+3. Adjust required experience, education, and ranking weights.
+4. Submit to screen the same reproducibly selected sample of up to 40 readable PDF resumes from `resume dataset/data/`.
 
-## 🌟 Show Your Support
+The first demo run extracts and preprocesses the sample, then caches it in memory for later runs. PDF files are grouped into category folders, and each folder name is used as the candidate category. The demo requires this PDF corpus; the processed CSV remains part of the separate training and command-line workflows.
 
-If you find this project useful, please consider: 
+### Review a candidate
 
-- ⭐ Starring the repository
-- 🐛 Reporting bugs or issues
-- 💡 Suggesting new features
-- 📢 Sharing with others
+The results list includes rank, composite score, skill coverage, experience, and shortlist status. **View NLP Breakdown** opens component scores, role-requirement checks, matched and missing skills, evidence excerpts, highlights, and a resume-text preview. Evidence is extracted from the resume; it is not an independent verification of the claim.
 
----
+## Routes and API
 
-## 🙏 Acknowledgments
+The application currently implements these routes:
 
-- [Hugging Face](https://huggingface.co/) for transformer models
-- [Sentence Transformers](https://www.sbert.net/) for semantic embeddings
-- [Flask](https://flask.palletsprojects.com/) for web framework
-- The open-source community
+| Method | Path | Purpose |
+|---|---|---|
+| GET | / | Fieldnote landing page |
+| GET, POST | /upload | Upload a job description and resume batch, then render ranked results |
+| GET, POST | /demo | Choose a sample role and rank a stable sample of categorized PDF resumes |
+| POST | /api/parse-jd | Parse job-description text or a JD document and return extracted fields as JSON |
+| GET | /api/export-csv | Download the most recent screening result set held in the current app process |
 
----
+There is no general-purpose JSON endpoint for ranking resumes and no candidate-by-ID API in the current implementation.
 
-<div align="center">
+### Parse a job description with JSON
 
+Request:
 
+    curl -X POST http://localhost:5000/api/parse-jd \
+      -H "Content-Type: application/json" \
+      -d '{"job_description":"Senior Data Scientist. Required skills: Python, SQL, and scikit-learn. Minimum 4 years of experience. Preferred: Tableau."}'
 
-[⬆ Back to Top](#-ai-powered-resume-screening-system)
+The JSON response contains status, job_title, seniority, required_experience, required_education, core_skills, preferred_skills, all_skills, skills_by_category, responsibilities, and raw_text.
 
-</div>
+A document can be parsed with multipart form data:
+
+    curl -X POST http://localhost:5000/api/parse-jd -F "jd_file=@role-description.pdf"
+
+Accepted JD formats are PDF, DOCX, and TXT.
+
+### Export the latest results
+
+    curl -OJ http://localhost:5000/api/export-csv
+
+The CSV includes rank, candidate/file, category, fit tier, final and component scores, experience, matched/missing/bonus skills, and shortlist status. The endpoint uses in-memory state: it only exports the latest completed run in this process and returns an error if no run is available.
+
+## Saved screening runs
+
+After a successful upload screening or demo screening, the app writes a JSON record to results/screening_runs/. The record includes:
+
+- Unique run ID, local timestamp, and run mode
+- Job title, seniority, full job-description text, and requirement settings
+- Normalized scoring weights and Sentence-BERT model identifier
+- Candidate rankings, score components, skill analysis, evidence, and resume previews
+- Aggregated NLP edge-case diagnostics
+
+These files are local records; there is no browser-based history or retrieval route. The CSV endpoint still uses the latest in-memory result set, so it does not retrieve an older JSON run after an app restart. The folder is listed in .gitignore because the records can contain personal candidate data. Protect the folder with the same care as the original resumes and remove records according to your retention requirements.
+
+## Training and evaluation
+
+The project has a separate category-classification training path:
+
+1. DataPreprocessor reads data/raw/UpdatedResumeDataSet.csv, whose expected columns are Category and Resume.
+2. It creates cleaned and lemmatized text, detected skills, and extracted experience, then writes data/processed/processed_resumes.csv.
+3. FeatureExtractor creates Sentence-BERT embeddings and caches them at models/saved_models/resume_embeddings.npy.
+4. ModelTrainer trains a feed-forward classifier to predict the dataset's resume category and saves its weights and label encoder under models/saved_models/.
+
+Run training from the project root:
+
+    python -m src.training.train
+
+Training reuses an existing processed CSV and cached embeddings when present. If the source data or preprocessing changes, ensure those cached files are regenerated before interpreting a new training run.
+
+The saved classifier is an auxiliary resume-category classifier. The Flask ranking flow does **not** load classifier_model.pth; it ranks directly with the pre-trained Sentence-BERT embeddings and the heuristic signals described above.
+
+### Existing evaluation snapshot
+
+The checked-in training_metrics.json and training_report.txt currently report the category classifier's held-out accuracy as **5.88%**, weighted precision as **0.0035**, weighted recall as **5.88%**, and weighted F1 as **0.0065** across 25 categories. The snapshot represents a small dataset and one split; these results are weak and should not be presented as evidence that the candidate-ranking flow is accurate. The ranking formula itself does not currently have a labeled ranking benchmark or a reported Precision@k / NDCG evaluation.
+
+Regenerate training metrics before using them in a report. Do not use older example numbers in generated documentation as current measured performance unless the artifacts support them.
+
+Training outputs include:
+
+- models/saved_models/classifier_model.pth
+- models/saved_models/label_encoder.npy
+- models/saved_models/resume_embeddings.npy
+- models/saved_models/training_metrics.json
+- models/saved_models/training_report.txt
+- models/saved_models/plots/
+
+To regenerate the supplementary results Markdown from the saved metrics and plots, run:
+
+    python generate_results_documentation.py
+
+That script writes results/PROJECT_RESULTS.md. Check the output against the current metric files before citing it; it may contain illustrative sample ranking text and is not a ranking evaluation.
+
+## Command-line example
+
+main.py ranks the processed dataset against a built-in example job description, prints the top candidates, and writes data/processed/ranked_candidates.csv.
+
+    python main.py
+
+The ranking class can also be called from a Python script. The DataFrame must contain a Resume text column; optional columns include processed_resume, extracted_skills, experience_years, filename, and Category.
+
+    import pandas as pd
+    from src.inference.resume_ranking import ResumeRanker
+
+    candidates = pd.DataFrame([
+        {
+            "filename": "candidate-a.txt",
+            "Resume": "Python developer with 5 years of experience. Built NLP services with PyTorch.",
+            "experience_years": 5,
+            "extracted_skills": ["python", "nlp", "pytorch"],
+        }
+    ])
+
+    ranker = ResumeRanker()
+    results = ranker.rank_candidates(
+        candidates,
+        "Python engineer with NLP and PyTorch experience. Minimum 3 years.",
+        required_experience=3,
+        required_education="Bachelor's degree",
+        required_skills=["python", "nlp", "pytorch"],
+    )
+    print(results[["rank", "filename", "final_score", "matched_skills"]])
+
+Instantiating ResumeRanker loads the Sentence-BERT model, so the first call may download model files and use significant memory.
+
+## Configuration
+
+Runtime and training settings are defined in src/config.py:
+
+| Setting | Default | Purpose |
+|---|---:|---|
+| MODEL_NAME | sentence-transformers/all-MiniLM-L6-v2 | Sentence embedding model |
+| DEVICE | CUDA when available, otherwise CPU | PyTorch device |
+| BATCH_SIZE | 32 | Embedding batch size |
+| SEMANTIC_WEIGHT | 0.45 | Default semantic score weight |
+| SKILL_WEIGHT | 0.30 | Default core skill score weight |
+| EXPERIENCE_WEIGHT | 0.15 | Default experience score weight |
+| EDUCATION_WEIGHT | 0.10 | Default education score weight |
+| SHORTLIST_THRESHOLD | 0.60 | Minimum composite score to mark shortlisted |
+| LEARNING_RATE | 0.00002 | Classifier training learning rate |
+| EPOCHS | 10 | Classifier training epochs |
+
+The web form supplies per-run weights; Config values are the fallback defaults for code that calls ResumeRanker directly.
+
+## Project structure
+
+    app.py                              Flask routes, upload processing, CSV export, local run persistence
+    main.py                             CLI sample ranking entry point
+    requirements.txt                    Python dependencies
+    Dockerfile                          Container build and Gunicorn startup
+    gunicorn.conf.py                    Separate Gunicorn configuration file
+    src/
+      config.py                         Runtime, paths, model, and scoring defaults
+      inference/
+        jd_parser.py                    Job-description parser
+        resume_ranking.py               Candidate scoring and ranking
+        skill_ontology.py               Skill taxonomy, aliases, normalization
+        utils.py                        Text cleaning, skill/experience/education extraction, evidence
+      training/
+        data_preprocessing.py           Raw resume dataset preprocessing
+        feature_extraction.py           Sentence-BERT embeddings and cosine similarity
+        model_training.py               Resume-category neural classifier and metrics
+        train.py                        Preprocess, embed, train, and save pipeline
+    templates/                          Flask/Jinja pages: home, upload, demo, results, base
+    static/css/style.css                Fieldnote theme and responsive design system
+    static/js/main.js                   Upload interactions, parsing UI, weights, result controls
+    data/raw/                            Original resume dataset
+    resume dataset/data/<CATEGORY>/      Categorized source PDF resumes used by the web demo
+    data/processed/                      Processed resumes and sample ranking CSV
+    models/saved_models/                 Classifier, encoder, embeddings, metrics, plots
+    results/                             Generated project report and local screening-run JSON files
+    uploads/                             Temporary upload workspace
+
+## Privacy and deployment notes
+
+This application processes personal resume information. The current code is intended for local development or a carefully controlled demonstration, not an unreviewed public deployment.
+
+- The Flask development server binds to 0.0.0.0. Use it only on a trusted network; a firewall or localhost-only binding should be configured before exposing it elsewhere.
+- Flask currently uses a hard-coded secret key. Set a secure deployment secret outside source control before using sessions in a shared environment.
+- The app has no user login, role-based access, CSRF protection, or per-user data separation.
+- Saved run JSON contains job descriptions, candidate attributes, evidence, and resume excerpts. Keep results/screening_runs/ private and apply a deliberate retention policy.
+- The anonymization option is partial. It does not guarantee de-identification, may miss names or other personal attributes, and does not remove every possible proxy for identity.
+- Uploaded resumes are removed after text extraction, but screening results and excerpts are retained in memory and in local JSON records after a successful run.
+- The CSV export route is not authenticated. Do not expose the app or its exports to untrusted users.
+- The included Dockerfile launches Gunicorn with two workers. Each worker may load its own model copy; verify RAM/VRAM capacity before using that configuration with a GPU.
+- For production use, configure authentication, authorization, CSRF protection, secure secret management, upload validation, logging, data retention, and an appropriate WSGI deployment before making the app reachable to external users.
+
+## Known limitations
+
+- JD parsing, candidate extraction, and evidence selection use rules and keyword patterns; they are not a validated hiring assessment.
+- The skill ontology has finite coverage. Unlisted technologies, unconventional wording, and context-dependent meanings can be missed or misclassified.
+- Negation handling covers selected common phrases, not all sentence structures. Check the source text.
+- Skills found in a projects section are surfaced as contextual mentions; the system does not infer project quality, ownership, depth, or recency.
+- Experience extraction can mistake unrelated year counts or miss nonstandard resume formats.
+- Education scoring compares degree keywords and does not reliably verify the field of study, accreditation, completion, or equivalency.
+- Semantic similarity can reward broad topical overlap and should not be read as a calibrated probability or a measure of candidate quality.
+- Shortlist status is a threshold on the composite score, not a minimum-requirements gate.
+- Scanned/image-only PDFs need OCR, which is not provided.
+- Ranking evaluation data and recruiter feedback loops are not currently included.
+
+## Troubleshooting
+
+### spaCy model errors
+
+Install the English model in the active environment and restart the app:
+
+    python -m spacy download en_core_web_sm
+
+The JD parser can fall back to a blank spaCy pipeline, but the resume cleaner attempts to install the English model when it is unavailable. Installing it explicitly is more predictable.
+
+### NLTK resource errors
+
+Download the tokenizer and corpora into the active Python environment:
+
+    python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('stopwords'); nltk.download('wordnet')"
+
+### First startup or model download is slow
+
+The model is loaded during application initialization and may download from Hugging Face on first use. Allow the initial load to finish. If running offline, pre-populate the Hugging Face model cache first.
+
+### CUDA is unavailable
+
+The application selects CPU when PyTorch cannot access CUDA. It should still run, but embedding generation may be slower. Confirm that the installed PyTorch build matches the local CUDA driver and GPU setup if acceleration is expected.
+
+### No candidates appear in the demo
+
+The demo looks for readable PDF files under `resume dataset/data/`, including its category subfolders. Check that the dataset is present and that the PDFs contain selectable text. Scanned image-only PDFs need OCR, which is not currently built in. The processed CSV is used by the separate training and command-line workflows, not by the web demo.
+
+### A PDF produces no resume text
+
+The PDF may be image-based or scanned. Convert it to a text-searchable PDF or provide a DOCX/TXT resume; OCR is not currently built in.
+
+## License
+
+No LICENSE file is currently included in the project directory. Confirm the intended license before redistributing this project or its dataset.

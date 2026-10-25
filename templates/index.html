@@ -1,59 +1,38 @@
 {% extends "base.html" %}
-
+{% block title %}Fieldnote — Candidate review, with context{% endblock %}
 {% block content %}
-<div class="hero-section text-center py-5 bg-light">
-    <div class="container">
-        <h1 class="display-4 mb-4">
-            <i class="fas fa-robot"></i> Intelligent Resume Screening System
-        </h1>
-        <p class="lead mb-4">
-            Automate candidate screening with AI-powered NLP technology
-        </p>
-        <div class="row justify-content-center mt-5">
-            <div class="col-md-4 mb-4">
-                <a href="/upload" class="btn btn-primary btn-lg w-100">
-                    <i class="fas fa-upload"></i> Upload Resumes
-                </a>
-            </div>
-            <div class="col-md-4 mb-4">
-                <a href="/demo" class="btn btn-success btn-lg w-100">
-                    <i class="fas fa-play-circle"></i> Try Demo
-                </a>
-            </div>
+<section class="home-hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="eyebrow-line"></span> A considered approach to hiring</div>
+        <h1>Find the right<br>person in the<br><em>whole story.</em></h1>
+        <p class="hero-subtitle">Bring a role and a stack of resumes together. Fieldnote surfaces the evidence, skills, and experience worth a closer look.</p>
+        <div class="hero-actions"><a href="/upload" class="btn btn-primary-gradient" id="hero_screen_btn">Start a candidate review <i class="fas fa-arrow-right"></i></a><a href="/demo" class="quiet-link" id="hero_demo_btn">See a sample review <span>↗</span></a></div>
+        <div class="hero-note"><span class="status-dot"></span> Built to support recruiter judgment, not replace it</div>
+      </div>
+      <div class="hero-visual" aria-label="Illustration of a candidate review sheet">
+        <div class="review-paper">
+          <div class="paper-top"><span>PROFILE / 01</span><span>ABOUT ME</span></div>
+          <div class="paper-rule"></div>
+          <div class="paper-kicker">A LITTLE ABOUT ME</div>
+          <div class="paper-name">Yash Naik</div>
+          <div class="paper-role">Full time Foodie</div>
+          <div class="paper-score-row"><div class="score-mark">21</div><div><strong>Years young</strong><small>Curious by nature</small></div><span class="paper-arrow">↗</span></div>
+          <div class="paper-rule"></div>
+          <div class="paper-label">RELEVANT EXPERIENCE</div>
+          <p class="paper-quote">“Turned Ideas and imaginations into projects for the community, while still exploring the vast sea of technology”</p>
+          <div class="paper-tags"><span>Community projects</span><span>Technology</span><span>Imagination</span></div>
+          <div class="paper-foot"><span>RELEVANT EXPERIENCE</span><span>Still exploring →</span></div>
         </div>
+        <div class="visual-caption"><span>01 — 04</span><span>One clear view of the evidence</span></div>
+        <div class="visual-stamp">FOOD<br>TECH<br>IDEAS</div>
+      </div>
     </div>
-</div>
-
-<div class="container py-5">
-    <h2 class="text-center mb-5">Features</h2>
-    <div class="row">
-        <div class="col-md-4 mb-4">
-            <div class="card h-100 text-center">
-                <div class="card-body">
-                    <i class="fas fa-brain fa-3x text-primary mb-3"></i>
-                    <h5 class="card-title">AI-Powered Analysis</h5>
-                    <p class="card-text">Uses Sentence-BERT for semantic understanding with 90% accuracy</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-4">
-            <div class="card h-100 text-center">
-                <div class="card-body">
-                    <i class="fas fa-ranking-star fa-3x text-success mb-3"></i>
-                    <h5 class="card-title">Intelligent Ranking</h5>
-                    <p class="card-text">Multi-factor scoring: semantic similarity, keywords, experience, education</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-4">
-            <div class="card h-100 text-center">
-                <div class="card-body">
-                    <i class="fas fa-bolt fa-3x text-warning mb-3"></i>
-                    <h5 class="card-title">Lightning Fast</h5>
-                    <p class="card-text">GPU-accelerated processing: <0.1 seconds per resume</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+  </div>
+</section>
+<section class="trust-strip"><div class="container trust-inner"><span>MADE FOR THE DETAILS</span><div><b>01</b> Skills &amp; experience</div><div><b>02</b> Relevant highlights</div><div><b>03</b> Side-by-side review</div><div class="trust-end">A little more signal.<br>A lot less sorting.</div></div></section>
+<section class="home-process"><div class="container"><div class="section-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> A simple process</div><h2>From role brief<br>to considered shortlist.</h2></div><p>Every score comes with context, so your team can spend time where it matters.</p></div>
+<div class="process-grid"><article class="process-card"><span class="step-num">01</span><div class="process-icon"><i class="far fa-file-alt"></i></div><h3>Set the brief</h3><p>Upload a job description or paste the essentials. Review the skills and requirements identified for the role.</p><a href="/upload">Add a role brief <span>→</span></a></article><article class="process-card"><span class="step-num">02</span><div class="process-icon"><i class="fas fa-inbox"></i></div><h3>Gather resumes</h3><p>Add PDF, DOCX, or TXT files. Candidate experience and relevant skills are organized for a faster first pass.</p><a href="/upload">Add candidate resumes <span>→</span></a></article><article class="process-card"><span class="step-num">03</span><div class="process-icon"><i class="fas fa-list-ul"></i></div><h3>Review with context</h3><p>See ranked profiles, matched and missing skills, experience, and career highlights in one readable view.</p><a href="/demo">Explore a sample <span>→</span></a></article></div></div></section>
+<section class="home-bottom"><div class="container"><div class="bottom-card"><div><div class="eyebrow"><span class="eyebrow-line"></span> Your next shortlist starts here</div><h2>Make room for the<br><em>human part</em> of hiring.</h2></div><a href="/upload" class="btn btn-primary-gradient">Review candidates <i class="fas fa-arrow-right"></i></a><span class="bottom-index">FIELDNOTE / 2026</span></div></div></section>
 {% endblock %}

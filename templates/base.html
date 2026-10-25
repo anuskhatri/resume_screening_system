@@ -3,62 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Resume Screening System{% endblock %}</title>
+    <meta name="description" content="A considered workspace for reviewing candidate experience, skills, and role fit.">
+    <title>{% block title %}Fieldnote — Candidate review, with context{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 & FontAwesome Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Fieldnote design system -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-brain"></i> AI Resume Screener
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/upload">Upload Resumes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/demo">Demo</a>
-                    </li>
-                </ul>
+    <!-- Top Navigation Bar -->
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-custom" id="main_navbar">
+            <div class="container">
+                <a class="navbar-brand" href="/" id="brand_home_link">
+                    <div class="brand-icon-wrapper">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <span>Fieldnote<span class="brand-word"> / Hiring desk</span></span>
+                    
+                </a>
+                <button class="navbar-toggler text-white border-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarContent">
+                    <ul class="navbar-nav ms-auto align-items-center gap-1">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/" id="nav_home">
+                                <i class="fas fa-home me-1 opacity-75"></i> Overview
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/upload' %}active{% endif %}" href="/upload" id="nav_upload">
+                                <i class="fas fa-cloud-arrow-up me-1 opacity-75"></i> Review candidates
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/demo' %}active{% endif %}" href="/demo" id="nav_demo">
+                                <i class="fas fa-wand-magic-sparkles me-1 opacity-75"></i> Sample review
+                            </a>
+                        </li>
+                        <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
+                            <a href="/upload" class="btn btn-primary-gradient py-2 px-3 fs-6" id="nav_cta_btn">
+                                <i class="fas fa-bolt"></i> Start a review
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
+    </header>
 
-    <!-- Flash Messages -->
+    <!-- Global Flash Notification Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <div class="container mt-3">
+            <div class="container mt-3" id="flash_messages_wrapper">
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show glass-panel border-opacity-25" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-{{ 'circle-exclamation' if category == 'error' else 'circle-check' }} me-2 fs-5 text-{{ 'danger' if category == 'error' else 'success' }}"></i>
+                            <div>{{ message }}</div>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             </div>
         {% endif %}
     {% endwith %}
 
-    <!-- Main Content -->
-    <main>
+    <!-- Main Content Injection -->
+    <main id="main_content_area">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-dark text-white text-center py-3 mt-5">
-        <p>&copy; 2025 AI Resume Screening System. Powered by NLP & Machine Learning.</p>
+    <!-- Global Footer -->
+    <footer>
+        <div class="container">
+            <div class="row align-items-center gy-3">
+                <div class="col-md-6 text-center text-md-start">
+                    <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2 mb-2">
+                        <div class="brand-icon-wrapper" style="width: 28px; height: 28px; font-size: 0.8rem;">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                        <strong class="text-white">Fieldnote — candidate review</strong>
+                    </div>
+                    <p class="text-muted small mb-0">
+                        A quieter, more considered way to review a candidate shortlist.
+                    </p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-end mb-2">
+                        <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25">PyTorch CUDA</span>
+                        <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25">Sentence-BERT</span>
+                        <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25">spaCy NER</span>
+                        <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25">Flask 3.1</span>
+                    </div>
+                    <div class="text-muted small">
+                        &copy; 2025 AI Resume Screening System. Made for thoughtful hiring.
+                    </div>
+                </div>
+            </div>
+        </div>
     </footer>
 
+    <!-- Bootstrap 5 Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Client-side Interactive Logic -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
