@@ -177,6 +177,13 @@
             {% set semantic_pct = (candidate.semantic_score * 100)|round|int %}
             {% set skill_pct = candidate.skill_match_pct|default(0)|round|int %}
             {% set is_shortlisted = candidate.shortlisted|default(false) %}
+            {% if score_pct >= 70 %}
+                {% set ring_color = '#10b981' %}
+            {% elif score_pct >= 50 %}
+                {% set ring_color = '#6366f1' %}
+            {% else %}
+                {% set ring_color = '#f43f5e' %}
+            {% endif %}
 
             <div class="candidate-card candidate-card-item {% if is_shortlisted %}shortlisted-card{% endif %}"
                  id="candidate_card_{{ candidate.rank }}"
@@ -194,7 +201,7 @@
                         <div class="form-check d-flex align-items-center gap-2">
                             <input class="form-check-input compare-checkbox" type="checkbox" 
                                    id="compare_cb_{{ candidate.rank }}"
-                                   data-candidate='{{ candidate|tojson }}'>
+                                   data-rank="{{ candidate.rank }}">
                             <span class="badge {% if candidate.rank == 1 %}bg-warning text-dark{% elif candidate.rank == 2 %}bg-secondary text-white{% elif candidate.rank == 3 %}bg-danger text-white{% else %}bg-dark text-white-50 border border-secondary border-opacity-50{% endif %} fs-6 px-2 py-1">
                                 #{{ candidate.rank }}
                             </span>
@@ -244,7 +251,7 @@
                             <svg width="68" height="68">
                                 <circle class="bg-ring" cx="34" cy="34" r="28"></circle>
                                 <circle class="progress-ring" cx="34" cy="34" r="28"
-                                        stroke="{{ '#10b981' if score_pct >= 70 else ('#6366f1' if score_pct >= 50 else '#f43f5e') }}"
+                                        stroke="{{ ring_color }}"
                                         stroke-dasharray="175.9"
                                         stroke-dashoffset="{{ 175.9 - (175.9 * score_pct / 100) }}"></circle>
                             </svg>
@@ -266,7 +273,7 @@
                             <button type="button" class="btn btn-sm btn-secondary-glass py-1 px-3 fs-6" 
                                     data-bs-toggle="modal" 
                                     data-bs-target="#candidateDetailModal"
-                                    data-candidate='{{ candidate|tojson }}'>
+                                    data-rank="{{ candidate.rank }}">
                                 <i class="fas fa-chart-simple text-primary me-1"></i> View NLP Breakdown
                             </button>
                         </div>
@@ -506,4 +513,8 @@
         </div>
     </div>
 </div>
+
+<script type="application/json" id="screening_results_data">
+{{ results|tojson }}
+</script>
 {% endblock %}

@@ -28,7 +28,7 @@
                     <div class="col-md-6">
                         <div class="glass-panel p-3 h-100 role-select-card cursor-pointer" 
                              style="cursor: pointer; transition: all 0.2s ease;"
-                             onclick="selectDemoRole('{{ job_title|replace("'", "\\'") }}', `{{ job_desc|replace("`", "\\`") }}`)"
+                             data-role-title="{{ job_title }}"
                              id="role_card_{{ loop.index }}">
                             <div class="d-flex align-items-start gap-3">
                                 <div class="brand-icon-wrapper flex-shrink-0" style="width: 44px; height: 44px; font-size: 1.1rem;">
@@ -133,26 +133,51 @@
     </div>
 </div>
 
+<script type="application/json" id="sample_jobs_data">
+{{ sample_jobs|tojson }}
+</script>
+
 <script>
-function selectDemoRole(title, desc) {
-    document.getElementById('job_description').value = desc;
-    document.getElementById('selected_role_badge').textContent = 'Role: ' + title;
-
-    // Highlight selected card visually
-    document.querySelectorAll('.role-select-card').forEach(c => {
-        c.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-        c.style.boxShadow = 'none';
-    });
-    event.currentTarget.style.borderColor = 'var(--primary)';
-    event.currentTarget.style.boxShadow = '0 0 20px rgba(99, 102, 241, 0.25)';
-}
-
-// Auto-select first role on load if empty
 document.addEventListener('DOMContentLoaded', () => {
-    const firstRoleDesc = `{{ sample_jobs['AI / Machine Learning Engineer']|replace("`", "\\`") }}`;
+    let sampleJobsData = {};
+    try {
+        const raw = document.getElementById('sample_jobs_data');
+        if (raw && raw.textContent) {
+            sampleJobsData = JSON.parse(raw.textContent);
+        }
+    } catch (e) {
+        console.error('Failed to parse sample jobs data:', e);
+    }
+
+    function selectDemoRole(title) {
+        const desc = sampleJobsData[title] || '';
+        const ta = document.getElementById('job_description');
+        if (ta) ta.value = desc;
+        const badge = document.getElementById('selected_role_badge');
+        if (badge) badge.textContent = 'Role: ' + title;
+
+        document.querySelectorAll('.role-select-card').forEach(c => {
+            c.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+            c.style.boxShadow = 'none';
+        });
+        const activeCard = document.querySelector(`.role-select-card[data-role-title="${CSS.escape(title)}"]`);
+        if (activeCard) {
+            activeCard.style.borderColor = 'var(--primary)';
+            activeCard.style.boxShadow = '0 0 20px rgba(99, 102, 241, 0.25)';
+        }
+    }
+
+    document.querySelectorAll('.role-select-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const title = card.getAttribute('data-role-title');
+            if (title) selectDemoRole(title);
+        });
+    });
+
+    const defaultTitle = 'AI / Machine Learning Engineer';
     const ta = document.getElementById('job_description');
-    if (ta && !ta.value.trim()) {
-        ta.value = firstRoleDesc;
+    if (ta && !ta.value.trim() && sampleJobsData[defaultTitle]) {
+        ta.value = sampleJobsData[defaultTitle];
     }
 });
 </script>

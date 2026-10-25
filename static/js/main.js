@@ -307,6 +307,22 @@ function initResultsFiltering() {
     }
 }
 
+function getCandidateByRank(rank) {
+    if (!window._candidatesByRank) {
+        window._candidatesByRank = {};
+        const el = document.getElementById('screening_results_data');
+        if (el && el.textContent) {
+            try {
+                const list = JSON.parse(el.textContent);
+                list.forEach(c => { window._candidatesByRank[c.rank] = c; });
+            } catch (e) {
+                console.error('Failed to parse candidates JSON:', e);
+            }
+        }
+    }
+    return window._candidatesByRank ? window._candidatesByRank[rank] : null;
+}
+
 /* ==========================================================================
    4. Candidate Deep-Dive Modal
    ========================================================================== */
@@ -318,11 +334,17 @@ function initCandidateModal() {
         const button = event.relatedTarget;
         if (!button) return;
 
-        const dataStr = button.getAttribute('data-candidate');
-        if (!dataStr) return;
+        const rank = button.getAttribute('data-rank');
+        let cand = rank ? getCandidateByRank(rank) : null;
+        if (!cand) {
+            const dataStr = button.getAttribute('data-candidate');
+            if (dataStr) {
+                try { cand = JSON.parse(dataStr); } catch (e) { cand = null; }
+            }
+        }
+        if (!cand) return;
 
         try {
-            const cand = JSON.parse(dataStr);
             document.getElementById('modal_cand_name').textContent = cand.filename || 'Candidate Details';
             document.getElementById('modal_cand_rank').textContent = `#${cand.rank || '1'}`;
             document.getElementById('modal_cand_score').textContent = `${Math.round(cand.final_score * 100)}%`;
@@ -447,7 +469,16 @@ function initCandidateComparator() {
 
     checkboxes.forEach(cb => {
         cb.addEventListener('change', () => {
-            const candData = JSON.parse(cb.getAttribute('data-candidate'));
+            const rank = cb.getAttribute('data-rank');
+            let candData = rank ? getCandidateByRank(rank) : null;
+            if (!candData) {
+                const raw = cb.getAttribute('data-candidate');
+                if (raw) {
+                    try { candData = JSON.parse(raw); } catch (e) { candData = null; }
+                }
+            }
+            if (!candData) return;
+
             if (cb.checked) {
                 if (selectedCandidates.length >= 3) {
                     alert('You can compare a maximum of 3 candidates simultaneously.');
@@ -456,7 +487,7 @@ function initCandidateComparator() {
                 }
                 selectedCandidates.push(candData);
             } else {
-                selectedCandidates = selectedCandidates.filter(c => c.resume_id !== candData.resume_id);
+                selectedCandidates = selectedCandidates.filter(c => (c.resume_id || c.rank) !== (candData.resume_id || candData.rank));
             }
 
             updateDrawerState();
